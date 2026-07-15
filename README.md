@@ -10,9 +10,11 @@ Carrier-direct: **no account with anyone is required to run this** — you bring
 your own account with the carrier(s) you ship with.
 
 > Built and open-sourced by [Xentral](https://xentral.com), the ERP for growing
-> product businesses. This server is fully standalone and needs no Xentral
-> account. If you'd rather not host it, the same engine is available as a hosted
-> "Carrier Kit" inside Xentral — see [xentral.com](https://xentral.com).
+> product businesses. This server is fully standalone and needs no Xentral account.
+>
+> **Don't want to self-host?** The same engine is available ready-to-use, fully
+> hosted, as the **Carrier Kit** in Xentral AgentOS — no server to run, no setup:
+> **[agent.xentral.com/en/starter-kits](https://agent.xentral.com/en/starter-kits)**.
 
 ---
 
@@ -41,7 +43,24 @@ base64 label`. Adding or tweaking a carrier is a JSON file, not a code change.
 business/shipping account *with that carrier*. This project provides the
 integration; it does not include and cannot provide carrier credentials. The
 easiest self-serve entry points are the aggregators **Sendcloud** and
-**Shipcloud**. Per-carrier setup lives in [`docs/carriers/`](docs/carriers/).
+**Shipcloud**.
+
+### Per-carrier setup & examples
+
+Each guide has a concrete example: where to register, the exact env config, an
+example request, and the command to create a label.
+
+- **[DHL](docs/carriers/dhl.md)** — includes a free sandbox quickstart
+- **[GLS](docs/carriers/gls.md)**
+- **[UPS](docs/carriers/ups.md)** — has a sandbox
+- **[Sendcloud](docs/carriers/sendcloud.md)** — self-serve keys, easiest to start
+- **[DPD](docs/carriers/dpd.md)**
+- FedEx, Shipcloud and DHL Return follow the same pattern — run
+  `describe_carrier <code>` for their keys and see the configuration guide below.
+
+**→ [Configuration guide](docs/configuration.md)** — how credentials and options
+reach any carrier (env vars, TOML profiles, inline config, sandbox flags, adding
+your own carrier). Same mechanism for all of them.
 
 > ### ⚠️ DHL needs your own credentials
 > This repo ships **no** DHL keys. To use DHL you need:
@@ -165,6 +184,9 @@ Copy [`.env.example`](.env.example) and set only the carriers you use.
 
 Credentials can always also be passed inline per call (the MCP `create_label`
 `config` argument, or the library `config` dict) — inline wins over env.
+
+See the **[configuration guide](docs/configuration.md)** for TOML profiles,
+source precedence, sandbox flags, and the full canonical request shape.
 
 ## Add a carrier
 

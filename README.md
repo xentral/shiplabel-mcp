@@ -18,6 +18,33 @@ your own account with the carrier(s) you ship with.
 
 ---
 
+## Try it in 2 minutes
+
+Looking around needs no carrier account — `list_carriers` and `describe_carrier`
+work out of the box:
+
+```bash
+pip install shiplabel-mcp        # or: uv pip install shiplabel-mcp
+shiplabel carriers               # lists every carrier, no credentials needed
+```
+
+**Your first real label — the fastest path is Sendcloud** (self-serve API key, no
+per-carrier contract). Grab a public/secret key and a shipping-method id from the
+[Sendcloud panel](https://www.sendcloud.com), then:
+
+```bash
+export SHIPLABEL_SENDCLOUD_PUBLIC_KEY="..."
+export SHIPLABEL_SENDCLOUD_SECRET_KEY="..."
+export SHIPLABEL_SENDCLOUD_METHOD_ID="8"      # a shipping method from your panel
+shiplabel create --carrier sendcloud --from examples/sendcloud_request.json --out label.pdf
+```
+
+Prefer DHL? The [DHL sandbox](docs/carriers/dhl.md) needs no production contract.
+Full setup for every carrier: [per-carrier guides](docs/carriers/) ·
+[configuration](docs/configuration.md).
+
+---
+
 ## How it works
 
 Carriers are **data, not code.** One generic engine executes a declarative JSON

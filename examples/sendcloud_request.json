@@ -1,0 +1,23 @@
+{
+  "carrier": { "code": "sendcloud", "product": "8" },
+  "sender": {
+    "name": "Muster GmbH",
+    "street": "Musterstr.",
+    "house_number": "1",
+    "postal_code": "10115",
+    "city": "Berlin",
+    "country": "DE"
+  },
+  "recipient": {
+    "name": "Jan Jansen",
+    "street": "Dorpsstraat",
+    "house_number": "5",
+    "postal_code": "1011AB",
+    "city": "Amsterdam",
+    "country": "NL"
+  },
+  "parcels": [
+    { "id": "p1", "weight_kg": 1.2 }
+  ],
+  "references": { "delivery_note": "ORDER-100245" }
+}

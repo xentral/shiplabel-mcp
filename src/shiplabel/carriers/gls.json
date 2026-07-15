@@ -1,0 +1,110 @@
+{
+  "code": "gls",
+  "label": "GLS ShipIT REST API",
+  "transport": {
+    "base_url": "https://api.gls-group.eu/public/v1/shipments",
+    "endpoint": "",
+    "method": "POST"
+  },
+  "auth": {
+    "scheme": "basic",
+    "keys": {
+      "username": "gls_username",
+      "password": "gls_password"
+    }
+  },
+  "capabilities": [
+    "cod"
+  ],
+  "config_keys": [
+    {
+      "key": "gls_username",
+      "note": "GLS ShipIT API user"
+    },
+    {
+      "key": "gls_password",
+      "note": "GLS ShipIT API password"
+    },
+    {
+      "key": "gls_customer_id",
+      "note": "GLS customer id (part of shipperId)"
+    },
+    {
+      "key": "gls_contact_id",
+      "note": "GLS contact id (part of shipperId)"
+    },
+    {
+      "key": "gls_service",
+      "required": false,
+      "note": "service, e.g. flex (or carrier.product)"
+    }
+  ],
+  "request": {
+    "shipperId": "{{ config.get('gls_customer_id') }} {{ config.get('gls_contact_id') }}",
+    "references": [
+      "{{ (config.get('gls_reference') or references.delivery_note or references.order or '')[:20] }}"
+    ],
+    "addresses": {
+      "delivery": {
+        "name1": "{{ recipient.name }}",
+        "name2": "{{ recipient.address_line2 or '' }}",
+        "name3": "{{ recipient.company or '' }}",
+        "street1": "{{ (recipient.street ~ ' ' ~ (recipient.house_number or '')) | trim }}",
+        "country": "{{ recipient.country }}",
+        "zipCode": "{{ recipient.postal_code }}",
+        "city": "{{ recipient.city }}",
+        "phone": "{{ recipient.phone or '' }}",
+        "email": "{{ recipient.email or '' }}"
+      }
+    },
+    "parcels": {
+      "$for": "parcel in parcels",
+      "$body": {
+        "weight": "{{ parcel.weight_kg | float }}",
+        "references": [
+          "{{ (references.delivery_note or references.order or '')[:20] }}"
+        ],
+        "services": [
+          {
+            "$if": "{{ (carrier.product or config.get('gls_service')) == 'flex' }}",
+            "name": "flexdeliveryservice"
+          },
+          {
+            "$if": "{{ services.cod }}",
+            "name": "cod",
+            "infos": [
+              {
+                "name": "amount",
+                "value": "{{ services.cod.amount | string }}"
+              },
+              {
+                "name": "reference",
+                "value": "{{ (references.delivery_note or references.order or '')[:20] }}"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "incoterm": {
+      "$if": "{{ is_international }}",
+      "$value": "{{ config.get('gls_incoterm') or '20' }}"
+    }
+  },
+  "response": {
+    "items_path": "parcels",
+    "tracking": "trackId",
+    "label_shared_path": "labels.0",
+    "label_format": "pdf"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "when_path_nonempty": "errors",
+    "list_path": "errors[]",
+    "message_fields": [
+      "description"
+    ]
+  },
+  "customs_via": "document",
+  "customs_note": "GLS ShipIT: customs data belongs on the CN23 / commercial invoice, not in the label request."
+}

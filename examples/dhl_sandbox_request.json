@@ -1,0 +1,24 @@
+{
+  "carrier": { "code": "dhl", "product": "V01PAK" },
+  "sender": {
+    "name": "Muster GmbH",
+    "street": "Sträßchensweg",
+    "house_number": "10",
+    "postal_code": "53113",
+    "city": "Bonn",
+    "country": "DE"
+  },
+  "recipient": {
+    "name": "Erika Beispiel",
+    "street": "Kurt-Schumacher-Str.",
+    "house_number": "20",
+    "postal_code": "53113",
+    "city": "Bonn",
+    "country": "DE"
+  },
+  "parcels": [
+    { "id": "p1", "weight_kg": 1.5 }
+  ],
+  "references": { "delivery_note": "SHIPLABELTEST001" },
+  "label": { "format": "pdf" }
+}

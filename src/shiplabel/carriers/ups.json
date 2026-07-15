@@ -1,0 +1,191 @@
+{
+  "code": "ups",
+  "label": "UPS Shipping REST API (ship)",
+  "transport": {
+    "base_url": {
+      "prod": "https://onlinetools.ups.com/api/shipments/v1/ship",
+      "sandbox": "https://wwwcie.ups.com/api/shipments/v1/ship"
+    },
+    "endpoint": "",
+    "method": "POST",
+    "sandbox_key": "ups_sandbox"
+  },
+  "auth": {
+    "scheme": "oauth2_client_credentials",
+    "use_basic_header": true,
+    "token_url": {
+      "prod": "https://onlinetools.ups.com/security/v1/oauth/token",
+      "sandbox": "https://wwwcie.ups.com/security/v1/oauth/token"
+    },
+    "keys": {
+      "client_id": "ups_client_id",
+      "client_secret": "ups_client_secret"
+    }
+  },
+  "capabilities": [],
+  "label_formats": [
+    "gif",
+    "zpl",
+    "png"
+  ],
+  "config_keys": [
+    {
+      "key": "ups_client_id",
+      "note": "UPS app client id"
+    },
+    {
+      "key": "ups_client_secret",
+      "note": "UPS app client secret"
+    },
+    {
+      "key": "ups_account_number",
+      "note": "UPS shipper number"
+    },
+    {
+      "key": "ups_service_code",
+      "required": false,
+      "note": "service code, default 11 = UPS Standard (or carrier.product)"
+    },
+    {
+      "key": "ups_sandbox",
+      "required": false,
+      "note": "true = use the CIE sandbox"
+    }
+  ],
+  "value_maps": {
+    "label_format": {
+      "gif": "GIF",
+      "zpl": "ZPL",
+      "png": "PNG"
+    },
+    "ups_reason": {
+      "COMMERCIAL_SAMPLE": "SAMPLE",
+      "SALE": "SALE",
+      "PRESENT": "GIFT",
+      "RETURN_OF_GOODS": "RETURN",
+      "DOCUMENT": "SAMPLE",
+      "OTHER": "SALE"
+    }
+  },
+  "request": {
+    "ShipmentRequest": {
+      "Request": {
+        "RequestOption": "nonvalidate"
+      },
+      "Shipment": {
+        "Shipper": {
+          "Name": "{{ sender.name }}",
+          "ShipperNumber": "{{ config.get('ups_account_number') }}",
+          "Address": {
+            "AddressLine": [
+              "{{ (sender.street ~ ' ' ~ (sender.house_number or '')) | trim }}"
+            ],
+            "City": "{{ sender.city }}",
+            "PostalCode": "{{ sender.postal_code }}",
+            "CountryCode": "{{ sender.country }}"
+          }
+        },
+        "ShipTo": {
+          "Name": "{{ recipient.name }}",
+          "Address": {
+            "AddressLine": [
+              "{{ (recipient.street ~ ' ' ~ (recipient.house_number or '')) | trim }}"
+            ],
+            "City": "{{ recipient.city }}",
+            "PostalCode": "{{ recipient.postal_code }}",
+            "CountryCode": "{{ recipient.country }}",
+            "StateProvinceCode": {
+              "$if": "{{ recipient.state and recipient.country in ['US', 'CA'] }}",
+              "$value": "{{ recipient.state }}"
+            }
+          }
+        },
+        "PaymentInformation": {
+          "ShipmentCharge": [
+            {
+              "Type": "01",
+              "BillShipper": {
+                "AccountNumber": "{{ config.get('ups_account_number') }}"
+              }
+            }
+          ]
+        },
+        "Service": {
+          "Code": "{{ carrier.product or config.get('ups_service_code') or '11' }}",
+          "Description": "{{ config.get('ups_service_description') or 'UPS Standard' }}"
+        },
+        "ReferenceNumber": {
+          "$if": "{{ references.delivery_note or references.order }}",
+          "$value": [
+            {
+              "Value": "{{ (references.delivery_note or references.order)[:35] }}"
+            }
+          ]
+        },
+        "Package": {
+          "$for": "parcel in parcels",
+          "$body": {
+            "Packaging": {
+              "Code": "{{ config.get('ups_package_code') or '02' }}"
+            },
+            "PackageWeight": {
+              "UnitOfMeasurement": {
+                "Code": "KGS"
+              },
+              "Weight": "{{ (parcel.weight_kg | float) | string }}"
+            }
+          }
+        },
+        "LabelSpecification": {
+          "LabelImageFormat": {
+            "Code": "{{ vmap('label_format', label.format) }}"
+          },
+          "LabelStockSize": {
+            "$if": "{{ label.format == 'zpl' }}",
+            "Height": "6",
+            "Width": "4"
+          }
+        },
+        "ShipmentServiceOptions": {
+          "$if": "{{ is_international and customs }}",
+          "InternationalForms": {
+            "FormType": "01",
+            "InvoiceNumber": "{{ customs.invoice_number or '' }}",
+            "ReasonForExport": "{{ vmap('ups_reason', customs.export_type) }}",
+            "CurrencyCode": "{{ customs.items[0].currency if customs.items else 'EUR' }}",
+            "Product": {
+              "$for": "ci in customs.items",
+              "$body": {
+                "Description": "{{ ci.description }}",
+                "CommodityCode": "{{ ci.hs_code or '' }}",
+                "OriginCountryCode": "{{ ci.country_of_origin or sender.country }}",
+                "Unit": {
+                  "Number": "{{ ci.quantity }}",
+                  "Value": "{{ ci.value | float | string }}",
+                  "UnitOfMeasurement": {
+                    "Code": "PCS"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "items_path": "ShipmentResponse.ShipmentResults.PackageResults",
+    "tracking": "TrackingNumber",
+    "label": "ShippingLabel.GraphicImage",
+    "label_format_path": "ShippingLabel.ImageFormat.Code",
+    "label_format": "gif",
+    "tracking_url": "https://www.ups.com/track?tracknum={{ tracking }}"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "list_path": "response.errors[]",
+    "message_fields": [
+      "message"
+    ]
+  }
+}

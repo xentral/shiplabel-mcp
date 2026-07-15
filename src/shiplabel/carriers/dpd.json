@@ -1,0 +1,100 @@
+{
+  "code": "dpd",
+  "label": "DPD Cloud API (setOrder)",
+  "transport": {
+    "base_url": "https://cloud.dpd.com/api/v1/setOrder",
+    "endpoint": "",
+    "method": "POST"
+  },
+  "auth": {
+    "scheme": "none",
+    "headers": {
+      "PartnerCredentials-Name": "{{ config.get('dpd_partner_name') }}",
+      "PartnerCredentials-Token": "{{ config.get('dpd_partner_token') }}",
+      "UserCredentials-cloudUserID": "{{ config.get('dpd_cloud_user_id') }}",
+      "UserCredentials-Token": "{{ config.get('dpd_user_token') }}",
+      "Version": "100",
+      "Language": "de_DE"
+    }
+  },
+  "capabilities": [],
+  "config_keys": [
+    {
+      "key": "dpd_partner_name",
+      "note": "DPD Cloud partner name"
+    },
+    {
+      "key": "dpd_partner_token",
+      "note": "DPD Cloud partner token"
+    },
+    {
+      "key": "dpd_cloud_user_id",
+      "note": "DPD Cloud user id"
+    },
+    {
+      "key": "dpd_user_token",
+      "note": "DPD Cloud user token"
+    },
+    {
+      "key": "dpd_format",
+      "required": false,
+      "note": "label size/format, default PDF_A6 (e.g. ZPL variants)"
+    },
+    {
+      "key": "dpd_predict",
+      "required": false,
+      "note": "true = Classic_Predict service"
+    }
+  ],
+  "request": {
+    "OrderAction": "startOrder",
+    "OrderSettings": {
+      "ShipDate": "{{ config.get('dpd_ship_date') or '' }}",
+      "LabelSize": "{{ config.get('dpd_format') or 'PDF_A6' }}",
+      "LabelStartPosition": "UpperLeft"
+    },
+    "OrderDataList": {
+      "$for": "parcel in parcels",
+      "$body": {
+        "ShipAddress": {
+          "Company": "{{ recipient.company or '' }}",
+          "Name": "{{ recipient.name }}",
+          "Street": "{{ recipient.street }}",
+          "HouseNo": "{{ recipient.house_number or '' }}",
+          "ZipCode": "{{ recipient.postal_code }}",
+          "City": "{{ recipient.city }}",
+          "Country": "{{ recipient.country }}",
+          "State": "{{ recipient.state or '' }}",
+          "Phone": "{{ recipient.phone or '' }}",
+          "Mail": "{{ recipient.email or '' }}"
+        },
+        "ParcelData": {
+          "YourInternalID": "{{ (references.delivery_note or references.order or '')[:35] }}",
+          "Content": "{{ parcel.content or 'Content' }}",
+          "Weight": "{{ (parcel.weight_kg * 1000) | int | string }}",
+          "Reference1": "{{ (references.delivery_note or references.order or '')[:35] }}",
+          "Reference2": "{{ (references.custom2 or '')[:35] }}",
+          "ShipService": "{{ carrier.product or (config.get('dpd_predict') and 'Classic_Predict') or 'Classic' }}"
+        }
+      }
+    }
+  },
+  "response": {
+    "items_path": "LabelResponse.LabelDataList",
+    "tracking": "ParcelNo",
+    "label_shared_path": "LabelResponse.LabelPDF",
+    "label_format": "pdf",
+    "tracking_url": "https://my.dpd.de/redirect.aspx?action=1&pno={{ tracking }}"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "when_path_nonempty": "ErrorDataList",
+    "list_path": "ErrorDataList[]",
+    "message_fields": [
+      "ErrorMsgLong",
+      "ErrorMsgShort"
+    ]
+  },
+  "customs_via": "document",
+  "customs_note": "DPD Cloud: the HS code goes onto the CN23 / commercial invoice, not into the setOrder label call."
+}

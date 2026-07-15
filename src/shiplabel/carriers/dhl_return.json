@@ -1,0 +1,104 @@
+{
+  "code": "dhl_return",
+  "label": "DHL Retoure (Parcel DE Returns v1)",
+  "transport": {
+    "base_url": {
+      "prod": "https://api-eu.dhl.com",
+      "sandbox": "https://api-sandbox.dhl.com"
+    },
+    "endpoint": "/parcel/de/shipping/returns/v1/orders",
+    "method": "POST",
+    "query": {
+      "labelType": "SHIPMENT_LABEL"
+    },
+    "sandbox_key": "dhl_return_sandbox"
+  },
+  "auth": {
+    "scheme": "basic",
+    "keys": {
+      "username": "dhl_return_username",
+      "password": "dhl_return_password"
+    },
+    "headers": {
+      "dhl-api-key": "{{ config.get('dhl_return_api_key') }}"
+    }
+  },
+  "capabilities": [],
+  "config_keys": [
+    {
+      "key": "dhl_return_api_key",
+      "note": "DHL developer app key"
+    },
+    {
+      "key": "dhl_return_username",
+      "note": "GKP business-customer user"
+    },
+    {
+      "key": "dhl_return_password",
+      "note": "GKP business-customer password"
+    },
+    {
+      "key": "dhl_return_receiver_id",
+      "note": "DHL return receiver id (or carrier.product)"
+    },
+    {
+      "key": "dhl_return_sandbox",
+      "required": false,
+      "note": "true = use the sandbox environment"
+    }
+  ],
+  "value_maps": {
+    "country": {
+      "DE": "DEU",
+      "AT": "AUT",
+      "CH": "CHE",
+      "FR": "FRA",
+      "NL": "NLD",
+      "IT": "ITA",
+      "BE": "BEL",
+      "PL": "POL",
+      "ES": "ESP",
+      "DK": "DNK",
+      "CZ": "CZE",
+      "LU": "LUX",
+      "GB": "GBR",
+      "US": "USA"
+    }
+  },
+  "request": {
+    "receiverId": "{{ carrier.product or config.get('dhl_return_receiver_id') }}",
+    "customerReference": "{{ references.delivery_note or references.order or '' }}",
+    "shipper": {
+      "name1": "{{ sender.name }}",
+      "country": "{{ vmap('country', sender.country) }}",
+      "city": "{{ sender.city }}",
+      "postalCode": "{{ sender.postal_code }}",
+      "addressStreet": "{{ sender.street }}",
+      "addressHouse": "{{ sender.house_number or '' }}",
+      "email": "{{ sender.email or '' }}",
+      "phone": "{{ sender.phone or '' }}"
+    },
+    "itemWeight": {
+      "uom": "kg",
+      "value": "{{ parcels[0].weight_kg | float }}"
+    },
+    "itemValue": {
+      "currency": "EUR",
+      "value": 0.0
+    }
+  },
+  "response": {
+    "tracking": "shipmentNo",
+    "label": "label.b64",
+    "label_format": "pdf"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "detail_path": "detail",
+    "list_path": "items[].validationMessages[]",
+    "message_fields": [
+      "validationMessage"
+    ]
+  },
+  "customs_via": "none"
+}

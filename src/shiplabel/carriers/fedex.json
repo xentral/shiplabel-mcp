@@ -1,0 +1,171 @@
+{
+  "code": "fedex",
+  "label": "FedEx Ship API v1 (REST)",
+  "transport": {
+    "base_url": {
+      "prod": "https://apis.fedex.com/ship/v1/shipments",
+      "sandbox": "https://apis-sandbox.fedex.com/ship/v1/shipments"
+    },
+    "endpoint": "",
+    "method": "POST",
+    "sandbox_key": "fedex_sandbox"
+  },
+  "auth": {
+    "scheme": "oauth2_client_credentials",
+    "token_url": {
+      "prod": "https://apis.fedex.com/oauth/token",
+      "sandbox": "https://apis-sandbox.fedex.com/oauth/token"
+    },
+    "keys": {
+      "client_id": "fedex_client_id",
+      "client_secret": "fedex_client_secret"
+    }
+  },
+  "capabilities": [],
+  "label_formats": [
+    "pdf",
+    "zpl",
+    "png"
+  ],
+  "config_keys": [
+    {
+      "key": "fedex_client_id",
+      "note": "FedEx API project key (client id)"
+    },
+    {
+      "key": "fedex_client_secret",
+      "note": "FedEx API secret"
+    },
+    {
+      "key": "fedex_account_number",
+      "note": "FedEx shipping account number"
+    },
+    {
+      "key": "fedex_service",
+      "required": false,
+      "note": "service type, e.g. FEDEX_INTERNATIONAL_PRIORITY (or carrier.product)"
+    },
+    {
+      "key": "fedex_sandbox",
+      "required": false,
+      "note": "true = use the sandbox environment"
+    }
+  ],
+  "value_maps": {
+    "label_format": {
+      "pdf": "PDF",
+      "zpl": "ZPLII",
+      "png": "PNG"
+    }
+  },
+  "request": {
+    "labelResponseOptions": "LABEL",
+    "accountNumber": {
+      "value": "{{ config.get('fedex_account_number') }}"
+    },
+    "requestedShipment": {
+      "shipper": {
+        "contact": {
+          "personName": "{{ sender.contact_person or sender.name }}",
+          "companyName": "{{ sender.company or sender.name }}",
+          "phoneNumber": "{{ sender.phone or '' }}"
+        },
+        "address": {
+          "streetLines": [
+            "{{ (sender.street ~ ' ' ~ (sender.house_number or '')) | trim }}"
+          ],
+          "city": "{{ sender.city }}",
+          "stateOrProvinceCode": "{{ sender.state or '' }}",
+          "postalCode": "{{ sender.postal_code }}",
+          "countryCode": "{{ sender.country }}"
+        }
+      },
+      "recipients": [
+        {
+          "contact": {
+            "personName": "{{ recipient.contact_person or recipient.name }}",
+            "companyName": "{{ recipient.company or '' }}",
+            "phoneNumber": "{{ recipient.phone or '' }}"
+          },
+          "address": {
+            "streetLines": [
+              "{{ (recipient.street ~ ' ' ~ (recipient.house_number or '')) | trim }}"
+            ],
+            "city": "{{ recipient.city }}",
+            "stateOrProvinceCode": "{{ recipient.state or '' }}",
+            "postalCode": "{{ recipient.postal_code }}",
+            "countryCode": "{{ recipient.country }}"
+          }
+        }
+      ],
+      "pickupType": "{{ config.get('fedex_pickup_type') or 'USE_SCHEDULED_PICKUP' }}",
+      "serviceType": "{{ carrier.product or config.get('fedex_service') or 'FEDEX_INTERNATIONAL_PRIORITY' }}",
+      "packagingType": "{{ config.get('fedex_packaging_type') or 'YOUR_PACKAGING' }}",
+      "shippingChargesPayment": {
+        "paymentType": "SENDER"
+      },
+      "labelSpecification": {
+        "imageType": "{{ vmap('label_format', label.format) }}",
+        "labelStockType": "{{ config.get('fedex_label_stock') or 'PAPER_4X6' }}"
+      },
+      "requestedPackageLineItems": {
+        "$for": "parcel in parcels",
+        "$body": {
+          "weight": {
+            "units": "KG",
+            "value": "{{ parcel.weight_kg | float }}"
+          },
+          "dimensions": {
+            "$if": "{{ parcel.dimensions_cm }}",
+            "length": "{{ parcel.dimensions_cm.length | int }}",
+            "width": "{{ parcel.dimensions_cm.width | int }}",
+            "height": "{{ parcel.dimensions_cm.height | int }}",
+            "units": "CM"
+          }
+        }
+      },
+      "customsClearanceDetail": {
+        "$if": "{{ is_international and customs }}",
+        "dutiesPayment": {
+          "paymentType": "SENDER"
+        },
+        "commodities": {
+          "$for": "ci in customs.items",
+          "$body": {
+            "description": "{{ ci.description }}",
+            "countryOfManufacture": "{{ ci.country_of_origin or sender.country }}",
+            "harmonizedCode": "{{ ci.hs_code or '' }}",
+            "quantity": "{{ ci.quantity }}",
+            "quantityUnits": "PCS",
+            "unitPrice": {
+              "amount": "{{ ci.value | float }}",
+              "currency": "{{ ci.currency }}"
+            },
+            "customsValue": {
+              "amount": "{{ (ci.value | float) * (ci.quantity | int) }}",
+              "currency": "{{ ci.currency }}"
+            },
+            "weight": {
+              "units": "KG",
+              "value": "{{ (ci.net_weight_kg or 0) | float }}"
+            }
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "items_path": "output.transactionShipments.0.pieceResponses",
+    "tracking": "trackingNumber",
+    "label": "packageDocuments.0.encodedLabel",
+    "label_format_from_request": true,
+    "tracking_url": "https://www.fedex.com/fedextrack/?trknbr={{ tracking }}"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "list_path": "errors[]",
+    "message_fields": [
+      "message"
+    ]
+  }
+}

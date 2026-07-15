@@ -1,0 +1,28 @@
+# Secrets — never commit real credentials
+.env
+*.env
+!.env.example
+carriers.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Generated labels / scratch
+*.pdf
+*.zpl
+*.png
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

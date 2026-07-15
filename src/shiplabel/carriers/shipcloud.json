@@ -1,0 +1,120 @@
+{
+  "code": "shipcloud",
+  "label": "shipcloud REST API v1 (multi-carrier aggregator)",
+  "transport": {
+    "base_url": "https://api.shipcloud.io/v1/shipments",
+    "endpoint": "",
+    "method": "POST"
+  },
+  "auth": {
+    "scheme": "basic",
+    "keys": {
+      "username": "shipcloud_api_key"
+    },
+    "headers": {
+      "Affiliate-ID": "{{ config.get('shipcloud_affiliate_id') or '' }}"
+    }
+  },
+  "capabilities": [],
+  "config_keys": [
+    {
+      "key": "shipcloud_api_key",
+      "note": "shipcloud API key"
+    },
+    {
+      "key": "shipcloud_carrier",
+      "note": "underlying carrier, e.g. dhl_standard (or carrier.product)"
+    },
+    {
+      "key": "shipcloud_service",
+      "required": false,
+      "note": "service, default standard"
+    },
+    {
+      "key": "shipcloud_affiliate_id",
+      "required": false,
+      "note": "shipcloud affiliate id"
+    },
+    {
+      "key": "shipcloud_use_sender",
+      "required": false,
+      "note": "true = send the sender block from the request"
+    }
+  ],
+  "request": {
+    "to": {
+      "company": "{{ recipient.company or '' }}",
+      "care_of": "{{ recipient.address_line2 or '' }}",
+      "first_name": "{{ recipient.name.split()[:-1] | join(' ') }}",
+      "last_name": "{{ recipient.name.split()[-1] }}",
+      "street": "{{ recipient.street }}",
+      "street_no": "{{ recipient.house_number or '' }}",
+      "city": "{{ recipient.city }}",
+      "zip_code": "{{ recipient.postal_code }}",
+      "country": "{{ recipient.country }}"
+    },
+    "packages": {
+      "$for": "parcel in parcels",
+      "$body": {
+        "weight": "{{ parcel.weight_kg | float }}",
+        "description": "{{ parcel.content or '' }}",
+        "length": {
+          "$if": "{{ parcel.dimensions_cm }}",
+          "$value": "{{ parcel.dimensions_cm.length }}"
+        },
+        "width": {
+          "$if": "{{ parcel.dimensions_cm }}",
+          "$value": "{{ parcel.dimensions_cm.width }}"
+        },
+        "height": {
+          "$if": "{{ parcel.dimensions_cm }}",
+          "$value": "{{ parcel.dimensions_cm.height }}"
+        }
+      }
+    },
+    "carrier": "{{ carrier.product or config.get('shipcloud_carrier') }}",
+    "service": "{{ config.get('shipcloud_service') or 'standard' }}",
+    "reference_number": "{{ references.delivery_note or '' }}",
+    "notification_email": "{{ recipient.email or '' }}",
+    "create_shipping_label": true,
+    "from": {
+      "$if": "{{ config.get('shipcloud_use_sender') }}",
+      "company": "{{ sender.company or '' }}",
+      "first_name": "{{ sender.name.split()[:-1] | join(' ') }}",
+      "last_name": "{{ sender.name.split()[-1] }}",
+      "street": "{{ sender.street }}",
+      "street_no": "{{ sender.house_number or '' }}",
+      "city": "{{ sender.city }}",
+      "zip_code": "{{ sender.postal_code }}",
+      "country": "{{ sender.country }}"
+    },
+    "customs_declaration": {
+      "$if": "{{ is_international and customs }}",
+      "contents_type": "commercial_goods",
+      "currency": "{{ customs.items[0].currency if customs.items else 'EUR' }}",
+      "invoice_number": "{{ customs.invoice_number or '' }}",
+      "items": {
+        "$for": "ci in customs.items",
+        "$body": {
+          "description": "{{ ci.description }}",
+          "hs_tariff_number": "{{ ci.hs_code or '' }}",
+          "origin_country": "{{ ci.country_of_origin or '' }}",
+          "quantity": "{{ ci.quantity }}",
+          "net_weight": "{{ (ci.net_weight_kg or 0) | float }}",
+          "value_amount": "{{ ci.value | float }}"
+        }
+      }
+    }
+  },
+  "response": {
+    "tracking": "carrier_tracking_no",
+    "label": "label_url",
+    "label_is_url": true,
+    "label_format": "pdf"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "when_path_nonempty": "errors",
+    "list_path": "errors[]"
+  }
+}

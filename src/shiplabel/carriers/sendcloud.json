@@ -1,0 +1,108 @@
+{
+  "code": "sendcloud",
+  "label": "Sendcloud Public API v2 (multi-carrier — PostNL, DPD, DHL, Swiss/Austrian Post, ...)",
+  "transport": {
+    "base_url": "https://panel.sendcloud.sc/api/v2/parcels",
+    "endpoint": "",
+    "method": "POST",
+    "query": {
+      "errors": "verbose-carrier"
+    }
+  },
+  "auth": {
+    "scheme": "basic",
+    "keys": {
+      "username": "sendcloud_public_key",
+      "password": "sendcloud_secret_key"
+    }
+  },
+  "capabilities": [
+    "insurance"
+  ],
+  "config_keys": [
+    {
+      "key": "sendcloud_public_key",
+      "note": "Sendcloud API public key"
+    },
+    {
+      "key": "sendcloud_secret_key",
+      "note": "Sendcloud API secret key"
+    },
+    {
+      "key": "sendcloud_method_id",
+      "note": "Sendcloud shipping-method id = the carrier (or carrier.product)"
+    },
+    {
+      "key": "sendcloud_sender_id",
+      "required": false,
+      "note": "Sendcloud sender-address id"
+    }
+  ],
+  "request": {
+    "parcel": {
+      "name": "{{ recipient.name }}",
+      "company_name": "{{ recipient.company or '' }}",
+      "address": "{{ recipient.street }}",
+      "house_number": "{{ recipient.house_number or '' }}",
+      "city": "{{ recipient.city }}",
+      "postal_code": "{{ recipient.postal_code }}",
+      "country": "{{ recipient.country }}",
+      "email": "{{ recipient.email or '' }}",
+      "telephone": "{{ recipient.phone or '' }}",
+      "order_number": "{{ references.order or references.delivery_note or '' }}",
+      "weight": "{{ '%.3f' | format(parcels[0].weight_kg | float) }}",
+      "request_label": true,
+      "shipment": {
+        "id": "{{ (carrier.product or config.get('sendcloud_method_id')) | int }}"
+      },
+      "sender_address": {
+        "$if": "{{ config.get('sendcloud_sender_id') }}",
+        "$value": "{{ config.get('sendcloud_sender_id') | int }}"
+      },
+      "insured_value": {
+        "$if": "{{ services.insurance }}",
+        "$value": "{{ services.insurance.value | int }}"
+      },
+      "length": {
+        "$if": "{{ parcels[0].dimensions_cm }}",
+        "$value": "{{ parcels[0].dimensions_cm.length }}"
+      },
+      "width": {
+        "$if": "{{ parcels[0].dimensions_cm }}",
+        "$value": "{{ parcels[0].dimensions_cm.width }}"
+      },
+      "height": {
+        "$if": "{{ parcels[0].dimensions_cm }}",
+        "$value": "{{ parcels[0].dimensions_cm.height }}"
+      },
+      "total_order_value_currency": {
+        "$if": "{{ is_international and customs and customs.items }}",
+        "$value": "{{ customs.items[0].currency }}"
+      },
+      "parcel_items": {
+        "$if": "{{ is_international and customs }}",
+        "$value": {
+          "$for": "ci in customs.items",
+          "$body": {
+            "description": "{{ ci.description }}",
+            "quantity": "{{ ci.quantity }}",
+            "weight": "{{ '%.3f' | format((ci.net_weight_kg or 0) | float) }}",
+            "value": "{{ '%.2f' | format(ci.value | float) }}",
+            "hs_code": "{{ ci.hs_code or '' }}",
+            "origin_country": "{{ ci.country_of_origin or '' }}"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "tracking": "parcel.tracking_number",
+    "label": "parcel.label.label_printer",
+    "label_is_url": true,
+    "label_format": "pdf"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "detail_path": "error.message"
+  }
+}

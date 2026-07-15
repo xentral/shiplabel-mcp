@@ -1,0 +1,245 @@
+{
+  "code": "dhl",
+  "label": "DHL Paket (Parcel DE Shipping v2)",
+  "transport": {
+    "base_url": {
+      "prod": "https://api-eu.dhl.com/parcel/de/shipping/v2",
+      "sandbox": "https://api-sandbox.dhl.com/parcel/de/shipping/v2"
+    },
+    "endpoint": "/orders",
+    "method": "POST",
+    "query": {
+      "docFormat": "{{ vmap('label_format', label.format) }}",
+      "includeDocs": "include"
+    },
+    "sandbox_key": "dhl_sandbox"
+  },
+  "auth": {
+    "scheme": "oauth2_password",
+    "token_url": {
+      "prod": "https://api-eu.dhl.com/parcel/de/account/auth/ropc/v1/token",
+      "sandbox": "https://api-sandbox.dhl.com/parcel/de/account/auth/ropc/v1/token"
+    },
+    "keys": {
+      "client_id": "dhl_api_key",
+      "client_secret": "dhl_api_secret",
+      "username": "dhl_username",
+      "password": "dhl_password"
+    }
+  },
+  "capabilities": [
+    "cod",
+    "insurance",
+    "age_check",
+    "ident_check",
+    "premium"
+  ],
+  "label_formats": [
+    "pdf",
+    "zpl"
+  ],
+  "config_keys": [
+    {
+      "key": "dhl_username",
+      "note": "GKP business-customer user"
+    },
+    {
+      "key": "dhl_password",
+      "note": "GKP business-customer password"
+    },
+    {
+      "key": "dhl_accountnumber",
+      "note": "billing/account number (or billing.account_number in the request)"
+    },
+    {
+      "key": "dhl_sandbox",
+      "required": false,
+      "note": "true = use the sandbox environment"
+    },
+    {
+      "key": "dhl_api_key",
+      "source": "env",
+      "env": {
+        "prod": "DHL_API_CLIENT_ID",
+        "sandbox": "DHL_API_CLIENT_ID_SANDBOX"
+      },
+      "note": "Your developer.dhl.com app client_id. Read from env so it is never a per-request field; pass inline in config to override."
+    },
+    {
+      "key": "dhl_api_secret",
+      "source": "env",
+      "env": {
+        "prod": "DHL_API_CLIENT_SECRET",
+        "sandbox": "DHL_API_CLIENT_SECRET_SANDBOX"
+      },
+      "note": "Your developer.dhl.com app client_secret. Read from env so it is never a per-request field; pass inline in config to override."
+    }
+  ],
+  "value_maps": {
+    "label_format": {
+      "pdf": "PDF",
+      "zpl": "ZPL2"
+    },
+    "country": {
+      "DE": "DEU",
+      "AT": "AUT",
+      "CH": "CHE",
+      "FR": "FRA",
+      "NL": "NLD",
+      "IT": "ITA",
+      "BE": "BEL",
+      "PL": "POL",
+      "ES": "ESP",
+      "DK": "DNK",
+      "CZ": "CZE",
+      "LU": "LUX",
+      "GB": "GBR",
+      "US": "USA"
+    }
+  },
+  "request": {
+    "profile": "{{ config.get('dhl_profile') or 'STANDARD_GRUPPENPROFIL' }}",
+    "shipments": {
+      "$for": "parcel in parcels",
+      "$body": {
+        "product": "{{ carrier.product or config.get('dhl_product') or 'V01PAK' }}",
+        "billingNumber": "{{ billing.account_number or config.get('dhl_accountnumber') }}",
+        "refNo": "{{ (references.delivery_note or references.order or parcel.reference or '')[:35] }}",
+        "shipper": {
+          "name1": "{{ sender.name }}",
+          "name2": {
+            "$if": "{{ sender.company }}",
+            "$value": "{{ sender.company }}"
+          },
+          "addressStreet": "{{ sender.street }}",
+          "addressHouse": "{{ sender.house_number or '' }}",
+          "postalCode": "{{ sender.postal_code }}",
+          "city": "{{ sender.city }}",
+          "country": "{{ vmap('country', sender.country) }}",
+          "email": {
+            "$if": "{{ sender.email }}",
+            "$value": "{{ sender.email }}"
+          },
+          "phone": {
+            "$if": "{{ sender.phone }}",
+            "$value": "{{ sender.phone }}"
+          }
+        },
+        "consignee": {
+          "name1": "{{ recipient.name }}",
+          "name2": {
+            "$if": "{{ recipient.company }}",
+            "$value": "{{ recipient.company }}"
+          },
+          "addressStreet": "{{ recipient.street }}",
+          "addressHouse": "{{ recipient.house_number or '' }}",
+          "additionalAddressInformation1": {
+            "$if": "{{ recipient.address_line2 }}",
+            "$value": "{{ recipient.address_line2 }}"
+          },
+          "postalCode": "{{ recipient.postal_code }}",
+          "city": "{{ recipient.city }}",
+          "country": "{{ vmap('country', recipient.country) }}",
+          "state": {
+            "$if": "{{ recipient.state }}",
+            "$value": "{{ recipient.state }}"
+          },
+          "email": {
+            "$if": "{{ recipient.email }}",
+            "$value": "{{ recipient.email }}"
+          },
+          "phone": {
+            "$if": "{{ recipient.phone }}",
+            "$value": "{{ recipient.phone }}"
+          }
+        },
+        "details": {
+          "weight": {
+            "uom": "g",
+            "value": "{{ (parcel.weight_kg * 1000) | int }}"
+          },
+          "dim": {
+            "$if": "{{ parcel.dimensions_cm }}",
+            "uom": "mm",
+            "height": "{{ (parcel.dimensions_cm.height * 10) | int }}",
+            "length": "{{ (parcel.dimensions_cm.length * 10) | int }}",
+            "width": "{{ (parcel.dimensions_cm.width * 10) | int }}"
+          }
+        },
+        "services": {
+          "$if": "{{ services.age_check or services.ident_check or services.insurance or services.cod or services.premium }}",
+          "visualCheckOfAge": {
+            "$if": "{{ services.age_check }}",
+            "$value": "{{ 'A%d' | format(services.age_check) }}"
+          },
+          "identCheck": {
+            "$if": "{{ services.ident_check }}",
+            "firstName": "{{ services.ident_check.first_name }}",
+            "lastName": "{{ services.ident_check.last_name }}",
+            "dateOfBirth": "{{ services.ident_check.date_of_birth or '' }}",
+            "minimumAge": "{{ 'A%d' | format(services.ident_check.minimum_age) }}"
+          },
+          "additionalInsurance": {
+            "$if": "{{ services.insurance }}",
+            "currency": "{{ services.insurance.currency }}",
+            "value": "{{ services.insurance.value | float }}"
+          },
+          "cashOnDelivery": {
+            "$if": "{{ services.cod }}",
+            "amount": {
+              "currency": "{{ services.cod.currency }}",
+              "value": "{{ services.cod.amount | float }}"
+            },
+            "bankAccount": {
+              "accountHolder": "{{ services.cod.account_owner or '' }}",
+              "iban": "{{ services.cod.iban or '' }}",
+              "bic": "{{ services.cod.bic or '' }}"
+            }
+          },
+          "premium": {
+            "$if": "{{ services.premium }}",
+            "$value": true
+          }
+        },
+        "customs": {
+          "$if": "{{ is_international and customs }}",
+          "exportType": "{{ customs.export_type }}",
+          "termsOfTrade": "{{ customs.terms_of_trade or 'DAP' }}",
+          "invoiceNo": "{{ customs.invoice_number or '' }}",
+          "items": {
+            "$for": "ci in customs.items",
+            "$body": {
+              "itemDescription": "{{ ci.description }}",
+              "packagedQuantity": "{{ ci.quantity }}",
+              "itemValue": {
+                "currency": "{{ ci.currency }}",
+                "value": "{{ ci.value | float }}"
+              },
+              "itemWeight": {
+                "uom": "kg",
+                "value": "{{ (ci.net_weight_kg or 0) | float }}"
+              },
+              "countryOfOrigin": "{{ vmap('country', ci.country_of_origin or '') }}",
+              "hsCode": "{{ ci.hs_code or '' }}"
+            }
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "items_path": "items",
+    "tracking": "shipmentNo",
+    "label": "label.b64",
+    "label_format_from_request": true,
+    "tracking_url": "https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode={{ tracking }}"
+  },
+  "error": {
+    "when_status_ge": 400,
+    "detail_path": "detail",
+    "list_path": "items[].validationMessages[]",
+    "message_fields": [
+      "validationMessage"
+    ]
+  }
+}

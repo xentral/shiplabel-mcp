@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shiplabel-mcp"
+version = "0.1.0"
+description = "Carrier-agnostic shipping labels (DHL, DPD, UPS, FedEx, GLS, Sendcloud, Shipcloud) as a self-hostable MCP server."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Xentral" }]
+keywords = ["mcp", "shipping", "shipping-label", "dhl", "dpd", "ups", "fedex", "gls", "carrier"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "httpx[http2]>=0.28.1,<0.29.0",
+    "jinja2>=3.1.6,<4.0.0",
+    "pydantic>=2.0.0",
+    "mcp>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.6.0"]
+
+[project.urls]
+Homepage = "https://github.com/xentral/shiplabel-mcp"
+Source = "https://github.com/xentral/shiplabel-mcp"
+"Built by" = "https://xentral.com"
+
+[project.scripts]
+shiplabel-mcp = "shiplabel_mcp.__main__:main"
+shiplabel = "shiplabel.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/shiplabel", "src/shiplabel_mcp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/shiplabel/carriers" = "shiplabel/carriers"
+
+[tool.pytest.ini_options]
+testpaths = ["src/shiplabel/tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# str+Enum mix is intentional across the canonical model (JSON-serializable enums).
+ignore = ["UP042"]

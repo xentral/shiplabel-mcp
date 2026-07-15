@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "shiplabel": {
+      "command": "shiplabel-mcp",
+      "env": {
+        "DHL_API_CLIENT_ID_SANDBOX": "your-sandbox-app-id",
+        "DHL_API_CLIENT_SECRET_SANDBOX": "your-sandbox-app-secret",
+        "SHIPLABEL_DHL_USERNAME": "user-valid",
+        "SHIPLABEL_DHL_PASSWORD": "SandboxPasswort2023!",
+        "SHIPLABEL_DHL_ACCOUNTNUMBER": "33333333330102",
+        "SHIPLABEL_DHL_SANDBOX": "true"
+      }
+    }
+  }
+}
